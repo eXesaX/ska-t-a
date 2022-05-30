@@ -1,0 +1,27 @@
+version: '3.7'
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    container_name: clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  web:
+    image: webapp
+    build:
+      context: .
+    container_name: webapp
+    network_mode: host
+    depends_on:
+      - redis
+      - clickhouse
+    volumes:
+      - .:/app
+

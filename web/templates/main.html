@@ -1,0 +1,105 @@
+<head>
+    <title>Hey!</title>
+    <link rel="stylesheet" href="static/uPlot/uPlot.min.css">
+
+</head>
+<body>
+    <H1>Hey!</H1>
+    <div id="canvas"></div>
+    <div><select id="ticker_selector" onchange="on_select(this.value)"></select></div>
+    <script src="static/uPlot/uPlot.iife.js"></script>
+    <script>
+
+        fetch('/options', {
+            method: 'get'
+        }).then(response => response.text()).then(text => {
+            let element = document.getElementById("ticker_selector")
+            element.innerHTML = text;
+            console.log(element)
+        })
+
+        function on_select(value) {
+            console.log(value);
+            document.getElementById('canvas').remove();
+
+            function get_starting_tickers_data(ticker_name) {
+                return fetch(`/ticker?name=${ticker_name}&start=${+ new Date() / 1000 - 60}&stop=${+ new Date() / 1000}`, {
+                    method: 'get'
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        return data;
+                    })
+                    .catch(err => {
+                    })
+            }
+
+            const opts = {
+                title: value,
+                id: "canvas",
+                width: 1600,
+                height: 600,
+                cursor: {
+                    drag: {
+                        setScale: false,
+                    }
+                },
+                select: {
+                    show: false,
+                },
+                series: [
+                    {},
+                    {
+                        label: "ticker value",
+                        value: (u, v) => v == null ? "-" : v.toFixed(1),
+                        stroke: "red",
+                    },
+
+                ],
+                axes: [
+                    {},
+                    {
+                        values: (u, vals, space) => vals.map(v => +v.toFixed(1)),
+                    },
+                ],
+            };
+
+            let data = [[], []]
+
+            function fill_data(point) {
+                if (data[0].length === 0) {
+                    data[0] = [point['timestamp']]
+                } else {
+                    data[0].push(point['timestamp'])
+                }
+
+                if (data[1].length === 0) {
+                    data[1] = [point['value']]
+                } else {
+                    data[1].push(data[1][data[1].length - 1] + point['value'])
+                }
+            }
+
+            let result = get_starting_tickers_data(value).then(starting_data => {
+                // console.log(starting_data['points'])
+                starting_data['points'].forEach(point => {
+                    fill_data(point)
+                })
+                console.log(data)
+            })
+            let uplot = new uPlot(opts, data, document.body);
+
+            let exampleSocket = new WebSocket(`ws://localhost:8000/ws/${value}`);
+
+            exampleSocket.onmessage = function (event) {
+                // console.log(data)
+                let event_data = JSON.parse(event.data)
+                fill_data(event_data)
+
+                uplot.setData(data);
+            };
+        }
+        on_select('ticker_00');
+    </script>
+
+</body>

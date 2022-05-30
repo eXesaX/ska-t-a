@@ -1,0 +1,7 @@
+clickhouse-driver==0.2.3
+fastapi==0.78.0
+aioredis
+jinja2
+uvicorn
+pydantic
+websockets
